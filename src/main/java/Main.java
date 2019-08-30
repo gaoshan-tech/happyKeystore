@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 public class Main {
-    private static String keystore = "{\"address\":\"5G17Kx5ivX8dM7pJz19o2KHnPf2iKaitHdCxgdXeeDKJVMbynyjs95Qh8cjvKVstx1vC2cAhTXF5FxtcCUV28uiX\",\"tk\":\"5G17Kx5ivX8dM7pJz19o2KHnPf2iKaitHdCxgdXeeDKJmGi22ipTu3K3aZD2gN1K1UDzEZrUGeo28kcQ2djsb6K9\",\"crypto\":{\"cipher\":\"aes-128-ctr\",\"ciphertext\":\"15e571216de7dfb26822a546d7df345c66b1b7f7c8d431cf6def26c5f2327f7d\",\"cipherparams\":{\"iv\":\"ef68671d2ef4bea2297c89b6ea88e066\"},\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"n\":262144,\"p\":1,\"r\":8,\"salt\":\"78d1c45a4024c6e829bc05363b91aa0692a0e31161b2b8581abe01a59a68c364\"},\"mac\":\"b5fbc5d0d6c1004713868e2f24afe0829391dd1426736028ec8aadfdd8566b3b\"},\"id\":\"1fc9ec84-f247-4b10-bac7-e7098b03fa75\",\"version\":3}";
+    private static String keystore = "";
     public static void main(String[] args) throws IOException {
         AtomicLong progress = new AtomicLong(0);
         System.out.println(new Date());
