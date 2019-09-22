@@ -1,24 +1,26 @@
-package com.gaoshantech.craker.keystore;
+package com.gaoshantech.craker.generator;
 
 import com.google.common.primitives.Chars;
-import org.apache.storm.spout.SpoutOutputCollector;
+import org.apache.storm.kafka.bolt.KafkaBolt;
+import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.IRichSpout;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public class PasswordSpout implements IRichSpout {
-    private SpoutOutputCollector collector;
-    private String passwordMask;
+public class GeneratePasswordBolt extends KafkaBolt<String, String> {
+    private OutputCollector collector;
     private static List<Character> ASCII_LOWERCASE = Chars.asList("abcdefghijklmnopqrstuvwxyz".toCharArray());
     private static List<Character> ASCII_UPPERCASE = Chars.asList("ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray());
     private static List<Character> ASCII_LETTERS = Chars.asList("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray());
@@ -27,34 +29,27 @@ public class PasswordSpout implements IRichSpout {
     private static List<Character> PUNCTUATION_TINY = Chars.asList("!@#$%^&*()-_+= ".toCharArray());
     private static List<Character> PRINTABLE = Chars.asList("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".toCharArray());
 
-    public PasswordSpout(String passwordMask){
-        this.passwordMask = passwordMask;
-    }
     @Override
-    public void open(Map<String, Object> map, TopologyContext topologyContext, SpoutOutputCollector spoutOutputCollector) {
-        this.collector = spoutOutputCollector;
+    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+        outputFieldsDeclarer.declare(new Fields("password"));
     }
 
     @Override
-    public void close() {
-
+    public Map<String, Object> getComponentConfiguration() {
+        return null;
     }
 
     @Override
-    public void activate() {
-
+    public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
+        this.collector = outputCollector;
     }
 
     @Override
-    public void deactivate() {
-
-    }
-
-    @Override
-    public void nextTuple() {
+    public void execute(Tuple tuple) {
+        String passwordMask = tuple.getStringByField("value");
         ArrayList<ArrayList<Character>> passwordGroups = new ArrayList<>();
         for (int i = 0; i < passwordMask.length(); i++) {
-            char ch = passwordMask.charAt(i);
+            char ch = passwordMask.charAt(i);// Qq%d%C%c%%
             /**
              * %%	- static character %
              * %c	- lower-case Latin characters  (a..z)
@@ -65,7 +60,7 @@ public class PasswordSpout implements IRichSpout {
              * %?	- all printable characters with ASCII codes of 32..127
              * %d	- one digit (0..9)
              */
-            if(ch == '%' && (i - 1) < passwordMask.length()){
+            if(ch == '%' && (i + 1) < passwordMask.length()){
                 ArrayList<Character> group = new ArrayList<>();
                 switch (passwordMask.charAt(i+1)){
                     case '%':
@@ -116,30 +111,10 @@ public class PasswordSpout implements IRichSpout {
         stream.forEach(password->{
             this.collector.emit(new Values(password));
         });
-        while (true) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                return;
-            }
-        }
     }
 
     @Override
-    public void ack(Object o) {
-    }
+    public void cleanup() {
 
-    @Override
-    public void fail(Object o) {
-    }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declare(new Fields("password"));
-    }
-
-    @Override
-    public Map<String, Object> getComponentConfiguration() {
-        return null;
     }
 }
