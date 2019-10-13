@@ -1,4 +1,4 @@
-package com.gaoshantech.craker.generator;
+package com.gaoshantech.craker.keystore;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -16,7 +16,7 @@ import org.apache.storm.tuple.Tuple;
 
 import java.util.Properties;
 
-public class GeneratorTopology {
+public class DecryptTopology {
     private static final String KAFKA_HOST = "127.0.0.1";
     private static final String KAFKA_PORT = "9092";
 
@@ -28,7 +28,7 @@ public class GeneratorTopology {
         cfg.setMaxSpoutPending(1000);
         cfg.setDebug(false);
         //创建spout
-        KafkaSpoutConfig<String, String> kafkaSpoutConfig = KafkaSpoutConfig.builder(KAFKA_HOST + ":" + KAFKA_PORT, "PasswordMask")
+        KafkaSpoutConfig<String, String> kafkaSpoutConfig = KafkaSpoutConfig.builder(KAFKA_HOST + ":" + KAFKA_PORT, "DecryptTask")
                 .setProp(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000)
                 .setProp(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000)
                 .setProp(ConsumerConfig.GROUP_ID_CONFIG, "group1")
@@ -38,7 +38,7 @@ public class GeneratorTopology {
                 .setProp(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
                 .setOffsetCommitPeriodMs(1000)//控制spout多久向kafka提交一次offset
                 .setMaxUncommittedOffsets(1)
-                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_MOST_ONCE)
+                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                 .build();
         //整合kafkaSpout
         KafkaSpout<String, String> kafkaSpout = new KafkaSpout<String, String>(kafkaSpoutConfig);
@@ -46,7 +46,7 @@ public class GeneratorTopology {
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_HOST + ":" + KAFKA_PORT);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        KafkaBolt<String, String> kafkaBolt = new KafkaBolt<String, String>().withTopicSelector("DecryptTask").withTupleToKafkaMapper(new TupleToKafkaMapper<String, String>() {
+        KafkaBolt<String, String> kafkaBolt = new KafkaBolt<String, String>().withTopicSelector("DecryptResult").withTupleToKafkaMapper(new TupleToKafkaMapper<String, String>() {
             @Override
             public String getKeyFromTuple(Tuple tuple) {
                 return tuple.getStringByField("address");
@@ -54,26 +54,24 @@ public class GeneratorTopology {
 
             @Override
             public String getMessageFromTuple(Tuple tuple) {
-                return tuple.getStringByField("decryptParam");
+                return tuple.getStringByField("result");
             }
         }).withProducerProperties(properties);
-
         // 设置storm数据源为kafka整合storm的kafkaSpout
-        builder.setSpout("KafkaPasswordMaskSpout", kafkaSpout, 1);
-        String keystore = "{\"address\":\"4vHQ8D1js97rx2argrNnJ6fkTT66hfsFMsxF9jTKBFozdLksh3aMN2Yr4KXgnem9D2QRRhoa4ESysWfmzSNsgAWi\",\"tk\":\"4vHQ8D1js97rx2argrNnJ6fkTT66hfsFMsxF9jTKBFozWB6rExrL6aB9ELZo1CjzbYo8qbY7GgNH3F9ZY4tJyzY7\",\"crypto\":{\"cipher\":\"aes-128-ctr\",\"ciphertext\":\"ff4889ec39c75f2bd1977a674d00932d4b113a67ebb7b6baea2fe4d2d3015383\",\"cipherparams\":{\"iv\":\"93c2e04a7137d2bc53c2a739c3fd08db\"},\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"n\":262144,\"p\":1,\"r\":8,\"salt\":\"b3206b441f0567460f38caec75227ee7d2809c72ef544912a1330fbf178d4b8e\"},\"mac\":\"d680f6e43af7fe18946b62dcc0c3c7731799db56ce62bcc20314b6b736e447de\"},\"id\":\"8ac00755-18d6-4a2f-bc08-d43dc83e830d\",\"version\":3}";
+        builder.setSpout("KafkaDecryptTaskSpout", kafkaSpout, 1);
         //数据流向，流向dataBolt进行处理
         if(args.length >= 3) {
-            builder.setBolt("GeneratePasswordBolt", new GeneratePasswordBolt(keystore), 1).shuffleGrouping("KafkaPasswordMaskSpout");
-            builder.setBolt("KafkaGeneratedPasswordStoreBolt", kafkaBolt).shuffleGrouping("GeneratePasswordBolt");
+            builder.setBolt("DecryptCheckBolt", new DecryptCheckBolt(), 1).shuffleGrouping("KafkaDecryptTaskSpout");
+            builder.setBolt("DecryptReportBolt", kafkaBolt).shuffleGrouping("DecryptCheckBolt");
             //提交拓扑图
-            StormSubmitter.submitTopology("password-generate-topo", cfg, builder.createTopology());
+            StormSubmitter.submitTopology("password-decrypt-topo", cfg, builder.createTopology());
         }
         else{
-            builder.setBolt("GeneratePasswordBolt", new GeneratePasswordBolt(keystore), 1).shuffleGrouping("KafkaPasswordMaskSpout");
-            builder.setBolt("KafkaGeneratedPasswordStoreBolt", kafkaBolt).shuffleGrouping("GeneratePasswordBolt");
+            builder.setBolt("DecryptCheckBolt", new DecryptCheckBolt(), 1).shuffleGrouping("KafkaDecryptTaskSpout");
+            builder.setBolt("DecryptReportBolt", kafkaBolt).shuffleGrouping("DecryptCheckBolt");
             //提交拓扑图
             LocalCluster localCluster = new LocalCluster();
-            localCluster.submitTopology("keystore-topo", cfg, builder.createTopology());
+            localCluster.submitTopology("password-decrypt-topo", cfg, builder.createTopology());
         }
     }
 }

@@ -1,8 +1,8 @@
 package com.gaoshantech.craker.keystore;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.alibaba.fastjson.JSON;
+import com.gaoshantech.craker.decrypt.DecryptParam;
+import com.gaoshantech.craker.decrypt.DecryptResult;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.IRichBolt;
@@ -11,37 +11,25 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.web3j.crypto.CipherException;
-import org.web3j.crypto.Wallet;
-import org.web3j.crypto.WalletFile;
+import org.web3j.crypto.WalletExtend;
 
-import java.io.IOException;
 import java.util.Map;
 
-public class PasswordCheckBolt implements IRichBolt {
+public class DecryptCheckBolt implements IRichBolt {
     private OutputCollector collector;
-    private String keystore;
-    WalletFile walletFile;
-    public PasswordCheckBolt(String keystore) throws IOException {
-        this.keystore = keystore;
-    }
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.collector = outputCollector;
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        try {
-            walletFile = objectMapper.readValue(keystore, WalletFile.class);
-        } catch (IOException e) {
-        }
     }
 
     @Override
     public void execute(Tuple tuple) {
-        String password = tuple.getStringByField("password");
+        String address = tuple.getStringByField("address");
+        DecryptParam decryptParam = new DecryptParam(tuple.getStringByField("decryptParam"));
+        byte[] result;
         while (true) {
             try {
-                Wallet.decrypt(password, walletFile);
+                result = WalletExtend.decryptPart(decryptParam);
                 break;
             } catch (CipherException e) {
                 return;
@@ -53,7 +41,7 @@ public class PasswordCheckBolt implements IRichBolt {
                 }
             }
         }
-        this.collector.emit(new Values(password, true));
+        this.collector.emit(new Values(address, JSON.toJSONString(new DecryptResult(result, decryptParam.getPassword()))));
     }
 
     @Override
@@ -63,7 +51,7 @@ public class PasswordCheckBolt implements IRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declare(new Fields("password", "state"));
+        outputFieldsDeclarer.declare(new Fields("address", "result"));
     }
 
     @Override

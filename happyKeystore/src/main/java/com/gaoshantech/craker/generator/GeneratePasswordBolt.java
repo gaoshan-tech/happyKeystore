@@ -1,25 +1,33 @@
 package com.gaoshantech.craker.generator;
 
+import com.gaoshantech.craker.decrypt.DecryptParam;
+import com.gaoshantech.craker.utils.CommonUtils;
 import com.google.common.primitives.Chars;
 import org.apache.storm.kafka.bolt.KafkaBolt;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import org.web3j.crypto.WalletFile;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class GeneratePasswordBolt extends KafkaBolt<String, String> {
+    private String keystore;
+    WalletFile walletFile;
+
+    public GeneratePasswordBolt(String keystore) {
+        this.keystore = keystore;
+    }
+
     private OutputCollector collector;
     private static List<Character> ASCII_LOWERCASE = Chars.asList("abcdefghijklmnopqrstuvwxyz".toCharArray());
     private static List<Character> ASCII_UPPERCASE = Chars.asList("ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray());
@@ -31,7 +39,7 @@ public class GeneratePasswordBolt extends KafkaBolt<String, String> {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declare(new Fields("password"));
+        outputFieldsDeclarer.declare(new Fields("address", "decryptParam"));
     }
 
     @Override
@@ -42,6 +50,7 @@ public class GeneratePasswordBolt extends KafkaBolt<String, String> {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.collector = outputCollector;
+        this.walletFile = CommonUtils.deserializeKeyStore(keystore);
     }
 
     @Override
@@ -109,7 +118,8 @@ public class GeneratePasswordBolt extends KafkaBolt<String, String> {
             stream = stream.map(item-> group.stream().map(str->item+str).collect(Collectors.toList())).flatMap(Collection::stream);
         }
         stream.forEach(password->{
-            this.collector.emit(new Values(password));
+            DecryptParam decryptParam = new DecryptParam(walletFile.getCrypto(), password);
+            this.collector.emit(new Values(walletFile.getAddress(), decryptParam.toString()));
         });
     }
 
