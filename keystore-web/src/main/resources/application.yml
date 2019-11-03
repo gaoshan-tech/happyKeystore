@@ -1,0 +1,14 @@
+spring:
+  kafka:     # 指定kafka 代理地址，可以多个
+    bootstrap-servers: http://127.0.0.1:9092
+    consumer:   # 指定默认消费者group id
+      group-id: Group1
+    template:    # 指定默认topic id
+      default-topic: PasswordMask
+    listener:   # 指定listener 容器中的线程数，用于提高并发量
+      concurrency: 5
+    producer:  # 每次批量发送消息的数量
+      batch-size: 1000
+
+server:
+  port: 8888
