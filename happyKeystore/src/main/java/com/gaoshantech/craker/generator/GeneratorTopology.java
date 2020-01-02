@@ -1,5 +1,6 @@
 package com.gaoshantech.craker.generator;
 
+import com.gaoshantech.craker.utils.CommonUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -14,11 +15,14 @@ import org.apache.storm.kafka.spout.KafkaSpoutConfig;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Tuple;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class GeneratorTopology {
-    private static final String KAFKA_HOST = "127.0.0.1";
-    private static final String KAFKA_PORT = "9092";
+    private static final String KAFKA_HOST = CommonUtils.readProperty("KAFKA_HOST");
+    private static final String KAFKA_PORT = CommonUtils.readProperty("KAFKA_PORT");
 
     public static void main(String[] args) throws Exception {
         // 组建拓扑，并使用流分组
@@ -62,7 +66,8 @@ public class GeneratorTopology {
         builder.setSpout("KafkaPasswordMaskSpout", kafkaSpout, 1);
         String keystore = "{\"address\":\"4vHQ8D1js97rx2argrNnJ6fkTT66hfsFMsxF9jTKBFozdLksh3aMN2Yr4KXgnem9D2QRRhoa4ESysWfmzSNsgAWi\",\"tk\":\"4vHQ8D1js97rx2argrNnJ6fkTT66hfsFMsxF9jTKBFozWB6rExrL6aB9ELZo1CjzbYo8qbY7GgNH3F9ZY4tJyzY7\",\"crypto\":{\"cipher\":\"aes-128-ctr\",\"ciphertext\":\"ff4889ec39c75f2bd1977a674d00932d4b113a67ebb7b6baea2fe4d2d3015383\",\"cipherparams\":{\"iv\":\"93c2e04a7137d2bc53c2a739c3fd08db\"},\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"n\":262144,\"p\":1,\"r\":8,\"salt\":\"b3206b441f0567460f38caec75227ee7d2809c72ef544912a1330fbf178d4b8e\"},\"mac\":\"d680f6e43af7fe18946b62dcc0c3c7731799db56ce62bcc20314b6b736e447de\"},\"id\":\"8ac00755-18d6-4a2f-bc08-d43dc83e830d\",\"version\":3}";
         //数据流向，流向dataBolt进行处理
-        if(args.length >= 3) {
+        if(args.length >= 1) {
+            keystore = Files.lines(Paths.get(args[0])).collect(Collectors.joining());
             builder.setBolt("GeneratePasswordBolt", new GeneratePasswordBolt(keystore), 1).shuffleGrouping("KafkaPasswordMaskSpout");
             builder.setBolt("KafkaGeneratedPasswordStoreBolt", kafkaBolt).shuffleGrouping("GeneratePasswordBolt");
             //提交拓扑图

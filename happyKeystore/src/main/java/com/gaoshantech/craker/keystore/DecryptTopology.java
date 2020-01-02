@@ -1,5 +1,6 @@
 package com.gaoshantech.craker.keystore;
 
+import com.gaoshantech.craker.utils.CommonUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -17,8 +18,8 @@ import org.apache.storm.tuple.Tuple;
 import java.util.Properties;
 
 public class DecryptTopology {
-    private static final String KAFKA_HOST = "127.0.0.1";
-    private static final String KAFKA_PORT = "9092";
+    private static final String KAFKA_HOST = CommonUtils.readProperty("KAFKA_HOST");
+    private static final String KAFKA_PORT = CommonUtils.readProperty("KAFKA_PORT");
 
     public static void main(String[] args) throws Exception {
         // 组建拓扑，并使用流分组
@@ -60,8 +61,8 @@ public class DecryptTopology {
         // 设置storm数据源为kafka整合storm的kafkaSpout
         builder.setSpout("KafkaDecryptTaskSpout", kafkaSpout, 1);
         //数据流向，流向dataBolt进行处理
-        if(args.length >= 3) {
-            builder.setBolt("DecryptCheckBolt", new DecryptCheckBolt(), 1).shuffleGrouping("KafkaDecryptTaskSpout");
+        if(args.length >= 1) {
+            builder.setBolt("DecryptCheckBolt", new DecryptCheckBolt(), Integer.parseInt(args[0])).shuffleGrouping("KafkaDecryptTaskSpout");
             builder.setBolt("DecryptReportBolt", kafkaBolt).shuffleGrouping("DecryptCheckBolt");
             //提交拓扑图
             StormSubmitter.submitTopology("password-decrypt-topo", cfg, builder.createTopology());

@@ -1,13 +1,13 @@
 spring:
-  kafka:     # Ö¸¶¨kafka ´úÀíµØÖ·£¬¿ÉÒÔ¶à¸ö
+  kafka:     # æŒ‡å®škafka ä»£ç†åœ°å€ï¼Œå¯ä»¥å¤šä¸ª
     bootstrap-servers: http://127.0.0.1:9092
-    consumer:   # Ö¸¶¨Ä¬ÈÏÏû·ÑÕßgroup id
+    consumer:   # æŒ‡å®šé»˜è®¤æ¶ˆè´¹è€…group id
       group-id: Group1
-    template:    # Ö¸¶¨Ä¬ÈÏtopic id
+    template:    # æŒ‡å®šé»˜è®¤topic id
       default-topic: PasswordMask
-    listener:   # Ö¸¶¨listener ÈİÆ÷ÖĞµÄÏß³ÌÊı£¬ÓÃÓÚÌá¸ß²¢·¢Á¿
+    listener:   # æŒ‡å®šlistener å®¹å™¨ä¸­çš„çº¿ç¨‹æ•°ï¼Œç”¨äºæé«˜å¹¶å‘é‡
       concurrency: 5
-    producer:  # Ã¿´ÎÅúÁ¿·¢ËÍÏûÏ¢µÄÊıÁ¿
+    producer:  # æ¯æ¬¡æ‰¹é‡å‘é€æ¶ˆæ¯çš„æ•°é‡
       batch-size: 1000
 
 server:

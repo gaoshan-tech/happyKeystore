@@ -122,7 +122,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>com.gaoshantech.craker.StormMain</mainClass>
+                            <mainClass>com.gaoshantech.craker.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
